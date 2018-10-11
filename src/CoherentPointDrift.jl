@@ -1,3 +1,5 @@
+module CoherentPointDrift
+
 using LinearAlgebra
 using DelimitedFiles
 using Gadfly, Cairo
@@ -63,27 +65,6 @@ function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2
     return R
 end
 
-# test
-X = collect(readdlm("osu.csv")')
-θ = π / 5
-rotation_matrix2d(θ::Float64) = [cos(θ) -sin(θ); sin(θ) cos(θ)]
-R_known = rotation_matrix2d(θ)
-Y = R_known * X .+ 0.01 * randn(size(X))
+export affine_point_set_registration
 
-p = plot(layer(x=X[1, :], y=X[2, :], Geom.point, Theme(default_color=colorant"green", background_color=colorant"white")),
-         layer(x=Y[1, :], y=Y[2, :], Geom.point, Theme(default_color=colorant"blue", background_color=colorant"white")),
-         Guide.title("b4 rotation")
-   )
-img = PNG("b4_alignment.png", 4inch, 4inch, dpi=300)
-draw(img, p)
-
-R = affine_point_set_registration(X, Y)
-Y_transformed = R * Y
-
-p = plot(layer(x=X[1, :], y=X[2, :], Geom.point, Theme(default_color=colorant"green", background_color=colorant"white")),
-         layer(x=Y_transformed[1, :], y=Y_transformed[2, :], Geom.point, Theme(default_color=colorant"orange", background_color=colorant"white")),
-         Guide.title("after rotation")
-    )
-img = PNG("after_alignment.png", 4inch, 4inch, dpi=300)
-draw(img, p)
-@assert isapprox(R, rotation_matrix2d(-θ), atol=0.01)
+end
