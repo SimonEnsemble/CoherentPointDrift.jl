@@ -3,7 +3,6 @@ using DelimitedFiles
 using Gadfly, Cairo, Colors
 using Test
 
-push!(LOAD_PATH, "../src")
 using CoherentPointDrift
 
 # 2D rotation matrix for testing.   
