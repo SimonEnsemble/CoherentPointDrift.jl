@@ -42,15 +42,13 @@ function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2
         
         # M step. Get best transformation
         μx = transpose(X) * transpose(P) * ones(M) / N
-        println("shape mu x ", size(μx))
         μy = transpose(Y) * P * ones(N) / N
-        println("shape mu y ", size(μy))
-        Xhat = X - ones(D) * transpose(μx)
-        Yhat = Y - ones(D) * transpose(μy)
-        B = transpose(Xhat) * transpose(P) * Yhat * inv(transpose(Yhat) * diagm(P * ones(size(P)[2])) * Yhat)
-        σ² = (tr(transpose(Xhat) * diagm(transpose(P) * ones(size(P)[1])) * Xhat) - tr(transpose(Xhat) * transpose(P) * Yhat * transpose(B))) / D / N
+        Xhat = X - ones(N) * transpose(μx)
+        Yhat = Y - ones(M) * transpose(μy)
+        B = transpose(Xhat) * transpose(P) * Yhat * inv(transpose(Yhat) * diagm(0 => P * ones(size(P)[2])) * Yhat)
+        σ² = (tr(transpose(Xhat) * diagm(0 => transpose(P) * ones(size(P)[1])) * Xhat) - tr(transpose(Xhat) * transpose(P) * Yhat * transpose(B))) / D / N
     end
     return B
 end
 
-affine_point_set_registration(rand(4, 3), rand(5, 3))
+affine_point_set_registration(rand(15, 3), rand(10, 3))
