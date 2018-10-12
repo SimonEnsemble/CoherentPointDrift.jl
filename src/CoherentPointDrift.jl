@@ -2,7 +2,6 @@ module CoherentPointDrift
 
 using LinearAlgebra
 using DelimitedFiles
-using Gadfly, Cairo
 
 function initial_σ²(X::Array{Float64, 2}, Y::Array{Float64, 2})
     # nb of data pts, dimension
