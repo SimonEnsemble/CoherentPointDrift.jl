@@ -15,19 +15,23 @@ themes = [Theme(default_color=color, panel_fill="white", grid_color="lightgray",
 
 @testset "2D visual test" begin
     # read in a 2D point cloud
-    X = collect(readdlm("osu.csv")')
+    Y = collect(readdlm("osu.csv")')
     
     # rotate at a known angle
-    θ = π / 5
+    θ = 2 * π * rand()
     R_known = rotation_matrix2d(θ)
-    Y = R_known * X
+    t_known = [rand(), rand()]
+
+    # construct X as a known transformation of Y
+    X = R_known * Y .+ t_known .+ 0.00001 * randn(size(Y))
     
     # see if we can recover the rotation matrix
-    R = affine_point_set_registration(X, Y)
-    @test isapprox(R, rotation_matrix2d(-θ), atol=0.001) # well, need -θ rotation to rotate back.
+    R, t, σ², q = affine_point_set_registration(X, Y, allow_translation=true, nb_em_steps=15)
+    @test isapprox(R, R_known, atol=0.001) # well, need -θ rotation to rotate back.
+    @test isapprox(t, t_known, atol=0.001)
 
     # a visual test; when we add noise
-    Y = R_known * X .+ 0.01 * randn(size(X))
+    X = R_known * Y .+ t_known .+ 0.01 * randn(size(X))
     
     # plot original points and points rotated, with noise.
     p = plot(layer(x=X[1, :], y=X[2, :], Geom.point, themes[1]),
@@ -37,8 +41,8 @@ themes = [Theme(default_color=color, panel_fill="white", grid_color="lightgray",
        )
     draw(PNG("before_alignment.png", 5inch, 4inch, dpi=300), p)
 
-    R = affine_point_set_registration(X, Y, nb_em_steps=6)
-    Y_transformed = R * Y
+    R, t, σ², q = affine_point_set_registration(X, Y, nb_em_steps=8, allow_translation=true)
+    Y_transformed = R * Y .+ t
 
     p = plot(layer(x=X[1, :], y=X[2, :], Geom.point, themes[1]),
              layer(x=Y_transformed[1, :], y=Y_transformed[2, :], Geom.point, themes[3]),
