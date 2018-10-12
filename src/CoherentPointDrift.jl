@@ -30,7 +30,7 @@ function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2
     # the rotation matrix
     R = diagm(0 => [1.0 for i = 1:D])
     σ² = initial_σ²(X, Y) # variance in GMM
-    P = zeros(M, N) # reuse
+    P = zeros(Float64, M, N) # reuse
 
     for em_step = 1:nb_em_steps
         println("\tEM step: ", em_step)
@@ -57,7 +57,7 @@ function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2
 
         F = svd(A)
         
-        R = F.U * diagm(0 => [i == D ? det(F.U * F.Vt) : 1 for i = 1:D]) * F.Vt
+        R = F.U * diagm(0 => [i == D ? det(F.U * F.Vt) : 1.0 for i = 1:D]) * F.Vt
 
         σ² = (tr(Xhat * diagm(0 => transpose(P) * ones(M)) * transpose(Xhat)) - tr(transpose(A) * R)) / (N * D)
     end
