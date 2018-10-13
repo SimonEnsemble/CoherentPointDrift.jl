@@ -25,6 +25,7 @@ function q_objective(X::Array{Float64, 2}, Y::Array{Float64, 2}, P::Array{Float6
     D = size(X)[1]
     M = size(Y)[2]                                                                          
     N = size(X)[2]
+    Np = sum(P)
 
     Y_transformed = R * Y .+ t
 
@@ -35,14 +36,14 @@ function q_objective(X::Array{Float64, 2}, Y::Array{Float64, 2}, P::Array{Float6
         end
     end
     q /= 2 * σ²
-    q += N * D / 2 * log(σ²)
+    q += Np * D / 2 * log(σ²)
     return q
 end
 
 "What transformation R * Y + t needs to be applied to Y to make it match X?"
-function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2};
+function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2};
                                        allow_translation::Bool=false,
-                                       nb_em_steps::Int=5)
+                                       nb_em_steps::Int=5, w::Float64=0.0)
     # nb of data pts, dimension
     D = size(X)[1]
     @assert D == size(Y)[1] "data must be of same dimension"
@@ -56,7 +57,7 @@ function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2
     # the bandwidth (variance) of the Gaussian mixture model
     σ² = initial_σ²(X, Y)
     # probabilities of correspondence
-    P = rand(Float64, M, N)
+    P = zeros(Float64, M, N)
     q = 0.0
 
     for em_step = 1:nb_em_steps
@@ -70,13 +71,13 @@ function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2
                 P[m, n] = exp(-sum((Y_transformed[:, m] - X[:, n]) .^ 2) / (2 * σ²))
             end
             # at this pt row m is filled
-            P[:, n] = P[:, n] / sum(P[:, n])
+            P[:, n] = P[:, n] / (sum(P[:, n]) + (2*π*σ²)^(D/2) * w / (1.0 - w) * M / N)
         end
-        @assert isapprox(sum(P), N, atol=0.05)
+        Np = sum(P)
         
         # M step. Get best transformation
-        μx = X * transpose(P) * ones(M) / N
-        μy = Y * P * ones(N) / N
+        μx = (sum(X * transpose(P), dims=2) / Np)[:]
+        μy = (sum(Y * P, dims=2) / Np)[:]
         Xhat = broadcast(-, X, μx)
         Yhat = broadcast(-, Y, μy)
 
@@ -86,22 +87,21 @@ function affine_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2
         
         R = F.U * diagm(0 => [i == D ? det(F.U * F.Vt) : 1.0 for i = 1:D]) * F.Vt
 
-        σ² = (tr(Xhat * diagm(0 => transpose(P) * ones(M)) * transpose(Xhat)) - tr(transpose(A) * R)) / (N * D)
+        σ² = (tr(Xhat * diagm(0 => transpose(P) * ones(M)) * transpose(Xhat)) - tr(transpose(A) * R)) / (Np * D)
 
         # objective
         q = q_objective(X, Y, P, σ², R, t)
         println("\t\tobjective: ", q)
+        println("\t\tσ² = ", σ²)
 
         if allow_translation
             t = μx .- R * μy
         end
     end
 
-    println("σ = ", sqrt(σ²))
-
     return R, t, σ², q
 end
 
-export affine_point_set_registration
+export rigid_point_set_registration
 
 end
