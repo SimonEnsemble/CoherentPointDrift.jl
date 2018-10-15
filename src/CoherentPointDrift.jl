@@ -76,18 +76,23 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
         Np = sum(P)
         
         # M step. Get best transformation
-        μx = (sum(X * transpose(P), dims=2) / Np)[:]
-        μy = (sum(Y * P, dims=2) / Np)[:]
+ #         μx = (sum(X * transpose(P), dims=2) / Np)[:]
+ #         μy = (sum(Y * P, dims=2) / Np)[:]
+        μx = X * P' * ones(M) / Np
+        μy = Y * P * ones(N) / Np
         Xhat = broadcast(-, X, μx)
         Yhat = broadcast(-, Y, μy)
 
-        A = Xhat * transpose(P) * transpose(Yhat)
+        A = Xhat * P' * Yhat'
 
-        F = svd(A)
+        F = svd(A, full=true)
         
         R = F.U * diagm(0 => [i == D ? det(F.U * F.Vt) : 1.0 for i = 1:D]) * F.Vt
 
-        σ² = (tr(Xhat * diagm(0 => transpose(P) * ones(M)) * transpose(Xhat)) - tr(transpose(A) * R)) / (Np * D)
+        σ² = (tr(Xhat * diagm(0 => P' * ones(M)) * Xhat') - tr(A' * R)) / (Np * D)
+        if σ² < 0.0
+            σ² = 1e-6
+        end
 
         # objective
         q = q_objective(X, Y, P, σ², R, t)
@@ -95,7 +100,7 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
         println("\t\tσ² = ", σ²)
 
         if allow_translation
-            t = μx .- R * μy
+            t = μx - R * μy
         end
     end
 
