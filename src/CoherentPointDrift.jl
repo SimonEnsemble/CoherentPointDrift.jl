@@ -42,8 +42,9 @@ end
 
 "What transformation R * Y + t needs to be applied to Y to make it match X?"
 function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2};
-                                       allow_translation::Bool=false,
-                                       nb_em_steps::Int=5, w::Float64=0.0)
+                                      allow_translation::Bool=false,
+                                      max_nb_em_steps::Int=25, q_tol::Float64=1e-5,
+                                      w::Float64=0.0, verbose::Bool=true)
     # nb of data pts, dimension
     D = size(X)[1]
     @assert D == size(Y)[1] "data must be of same dimension"
@@ -59,9 +60,9 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
     # probabilities of correspondence
     P = zeros(Float64, M, N)
     q = 0.0
+    q_old = Inf
 
-    for em_step = 1:nb_em_steps
-        println("\tEM step: ", em_step)
+    for em_step = 1:max_nb_em_steps
         # conduct the rotation with our best guess of R
         Y_transformed = R * Y .+ t
 
@@ -87,8 +88,14 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
 
         F = svd(A, full=true)
         
+        # update transformation
         R = F.U * diagm(0 => [i == D ? det(F.U * F.Vt) : 1.0 for i = 1:D]) * F.Vt
 
+        if allow_translation
+            t = μx - R * μy
+        end
+        
+        # update variance
         σ² = (tr(Xhat * diagm(0 => P' * ones(M)) * Xhat') - tr(A' * R)) / (Np * D)
         if σ² < 0.0
             σ² = 1e-6
@@ -96,12 +103,19 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
 
         # objective
         q = q_objective(X, Y, P, σ², R, t)
-        println("\t\tobjective: ", q)
-        println("\t\tσ² = ", σ²)
-
-        if allow_translation
-            t = μx - R * μy
+        
+        # terminate if objective hasn't decreased much, suggesting convergence
+        if abs(q - q_old) < q_tol
+            break
         end
+
+        if verbose
+            println("\tEM step: ", em_step)
+            println("\t\tobjective: ", q)
+            println("\t\tσ² = ", σ²)
+        end
+        
+        q_old = q
     end
 
     return R, t, σ², q

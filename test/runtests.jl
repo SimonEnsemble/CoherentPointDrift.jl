@@ -33,7 +33,7 @@ end
     θ = π / 6.0
     R_known = rotation_matrix2d(θ)
     X = test_transform(Y, θ, [0.0, 0.0], 0.0)
-    R, t, σ², q = rigid_point_set_registration(X, Y, allow_translation=false, nb_em_steps=10, w=0.0)
+    R, t, σ², q = rigid_point_set_registration(X, Y, allow_translation=false, w=0.0)
     @test isapprox(R, R_known, atol=0.001)
 
     ###
@@ -42,7 +42,7 @@ end
     t_known = [0.25, 0.45]
     X = test_transform(Y, θ, t_known, 0.0)
     # see if we can recover the rotation matrix
-    R, t, σ², q = rigid_point_set_registration(X, Y, allow_translation=true, nb_em_steps=15, w=0.0)
+    R, t, σ², q = rigid_point_set_registration(X, Y, allow_translation=true, w=0.0)
     @test isapprox(R, R_known, atol=0.001) # well, need -θ rotation to rotate back.
     @test isapprox(t, t_known, atol=0.001)
     
@@ -59,7 +59,7 @@ end
        )
     draw(PNG("before_alignment.png", 5inch, 4inch, dpi=300), p)
 
-    R, t, σ², q = rigid_point_set_registration(X, Y, allow_translation=true, nb_em_steps=15, w=0.0)
+    R, t, σ², q = rigid_point_set_registration(X, Y, allow_translation=true, w=0.0)
     Y_transformed = R * Y .+ t
 
     p = plot(layer(x=X[1, :], y=X[2, :], Geom.point, themes[1]),
