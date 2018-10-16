@@ -44,7 +44,7 @@ end
 function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2};
                                       allow_translation::Bool=false,
                                       max_nb_em_steps::Int=25, q_tol::Float64=1e-5,
-                                      w::Float64=0.0, verbose::Bool=true)
+                                      w::Float64=0.0, verbose::Bool=true, σ²_tol::Float64=1e-14)
     # nb of data pts, dimension
     D = size(X)[1]
     @assert D == size(Y)[1] "data must be of same dimension"
@@ -105,7 +105,7 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
         q = q_objective(X, Y, P, σ², R, t)
         
         # terminate if objective hasn't decreased much, suggesting convergence
-        if abs(q - q_old) < q_tol
+        if abs(q - q_old) < q_tol || (σ² < σ²_tol)
             break
         end
 
