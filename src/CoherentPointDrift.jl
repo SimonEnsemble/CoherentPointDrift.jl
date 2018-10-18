@@ -2,6 +2,7 @@ module CoherentPointDrift
 
 using LinearAlgebra
 using DelimitedFiles
+using Printf
 
 function initial_σ²(X::Array{Float64, 2}, Y::Array{Float64, 2})
     # nb of data pts, dimension
@@ -44,7 +45,8 @@ end
 function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2};
                                       allow_translation::Bool=false,
                                       max_nb_em_steps::Int=25, q_tol::Float64=1e-5,
-                                      w::Float64=0.0, verbose::Bool=true, σ²_tol::Float64=1e-14)
+                                      w::Float64=0.0, verbose::Bool=true, print_ending::Bool=true,
+                                      σ²_tol::Float64=1e-14)
     # nb of data pts, dimension
     D = size(X)[1]
     @assert D == size(Y)[1] "data must be of same dimension"
@@ -61,6 +63,7 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
     P = zeros(Float64, M, N)
     q = 0.0
     q_old = Inf
+    reason_for_exit = "max EM steps reached"
 
     for em_step = 1:max_nb_em_steps
         # conduct the rotation with our best guess of R
@@ -103,19 +106,27 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
 
         # objective
         q = q_objective(X, Y, P, σ², R, t)
-        
-        # terminate if objective hasn't decreased much, suggesting convergence
-        if abs(q - q_old) < q_tol || (σ² < σ²_tol)
-            break
-        end
-
         if verbose
             println("\tEM step: ", em_step)
             println("\t\tobjective: ", q)
             println("\t\tσ² = ", σ²)
         end
         
+        # terminate if objective hasn't decreased much, suggesting convergence
+        if abs(q - q_old) < q_tol
+            reason_for_exit = "objective stopped decreasing"
+            break
+        end
+        if σ² < σ²_tol
+            reason_for_exit = "variance below tol"
+            break
+        end
+
         q_old = q
+    end
+    
+    if print_ending
+        @printf("σ² = %f, q = %f, reason for exit: %s\n", σ², q, reason_for_exit)
     end
 
     return R, t, σ², q
