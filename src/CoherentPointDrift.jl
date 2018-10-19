@@ -101,7 +101,7 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
         # update variance
         σ² = (tr(Xhat * diagm(0 => P' * ones(M)) * Xhat') - tr(A' * R)) / (Np * D)
         if σ² < 0.0
-            σ² = 1e-6
+            σ² = 1.0
         end
 
         # objective
