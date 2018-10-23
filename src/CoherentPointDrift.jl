@@ -50,6 +50,8 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
                                       w::Float64=0.0, verbose::Bool=true, print_ending::Bool=true,
                                       σ²_tol::Float64=1e-6)
     D, M, N = dmn(X, Y)
+
+    start_time = time()
     
     # all of these will be updated in the loop.
     # the rotation matrix
@@ -68,7 +70,10 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
     # why did we break the loop?
     reason_for_exit = "max EM steps reached"
 
-    for em_step = 1:max_nb_em_steps
+    em_step = 0
+
+    while em_step < max_nb_em_steps
+        em_step += 1
         # conduct the rotation with our best guess of R
         Y_transformed .= R * Y .+ t
 
@@ -129,7 +134,8 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
     end
     
     if print_ending
-        @printf("σ² = %f, q = %f, reason for exit: %s\n", σ², q, reason_for_exit)
+        @printf("\tσ² = %f, q = %f, EM steps taken = %d, reason for exit: %s, time: %.5f min\n",
+            σ², q, em_step, reason_for_exit, (time() - start_time) / 60)
     end
 
     return R, t, σ², q
