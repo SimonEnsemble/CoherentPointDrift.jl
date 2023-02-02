@@ -1,6 +1,7 @@
 module CoherentPointDrift
 
 using LinearAlgebra
+# using DelimitedFiles
 using Printf
 
 function dmn(X::Array{Float64, 2}, Y::Array{Float64, 2})
@@ -17,7 +18,7 @@ function initial_σ²(X::Array{Float64, 2}, Y::Array{Float64, 2})
     σ² = 0.0
     for n = 1:N
         for m = 1:M
-            σ² += sum((X[:, n] - Y[:, m]) .^ 2)
+            @views σ² += sum(x->x^2, X[:, n] - Y[:, m])
         end
     end
     return σ² / (D * M  *N)
@@ -34,7 +35,7 @@ function q_objective(X::Array{Float64, 2}, Y::Array{Float64, 2}, P::Array{Float6
     q = 0.0
     for n = 1:N
         for m = 1:M
-            @inbounds q += P[m, n] * sum((X[:, n] - Y_transformed[:, m]) .^ 2)
+            @inbounds @views q += P[m, n] * sum(x->x^2, X[:, n] - Y_transformed[:, m])
         end
     end
     q /= 2 * σ²
@@ -88,10 +89,10 @@ function rigid_point_set_registration(X::Array{Float64, 2}, Y::Array{Float64, 2}
         # E step. Get correspondence.
         for n = 1:N
             for m = 1:M
-                @inbounds @views P[m, n] = exp(-sum(x->x^2, (Y_transformed[:, m] - X[:, n])) / (2 * σ²))
+                @inbounds @views P[m, n] = exp(-sum(x->x^2, Y_transformed[:, m] - X[:, n]) / (2 * σ²))
             end
             # at this pt row m is filled
-            @inbounds P[:, n] ./= sum(P[:, n]) + (2*π*σ²)^(D/2) * w / (1.0 - w) * M / N
+            @inbounds @views P[:, n] ./= sum(P[:, n]) + (2*π*σ²)^(D/2) * w / (1.0 - w) * M / N
         end
         Np = sum(P)
         
